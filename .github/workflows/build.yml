@@ -13,11 +13,9 @@ jobs:
         node-version: [22.x]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Chrome
-        uses: browser-actions/setup-chrome@latest
+      - uses: actions/checkout@v2
+      
+      - uses: browser-actions/setup-chrome@latest
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
@@ -42,19 +40,13 @@ jobs:
         run: |
           npm ci --force
 
-      # =================【加分项 1: 安全审计与依赖修复】=================
-      - name: Audit
-        run: |
-          npm audit fix --force || true  # 加 || true 防止因部分无法自动修复的非致命漏洞导致工作流中断
-
-      # =================【加分项 2: 修改规则并执行 Lint 检查】=================
-      - name: lint
-        run: |
-          npx ng lint --fix || true       # 执行 Angular Lint 静态分析
-
       - name: Build
         run: |
           npm run build --force
+
+      - name: Lint
+        run: |
+          npm run lint
 
       - name: Update types to latest
         run: |
@@ -81,40 +73,6 @@ jobs:
           release_name: ${{ steps.changelog.outputs.tag }}
           body: ${{ steps.changelog.outputs.clean_changelog }}
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         run: |
           npm run deploy
-
-      # =================【加分项 3: 打包 Docker 镜像并推送到 DockerHub】=================
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/bitcoin-order-app:latest
-
-      # =================【加分项 4: 部署到 AWS Elastic Beanstalk】=================
-      - name: Deploy to AWS ElasticBeanstalk
-        uses: einaregilsson/beanstalk-deploy@v21
-        with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: 'bitcoin-order-app'            # 替换为你在 AWS 上创建的应用名
-          environment_name: 'Bitcoinorderapp-env'          # 替换为你在 AWS 上创建的环境名
-          version_label: ${{ github.sha }}
-          region: 'ap-southeast-1'                         # 替换为你的 AWS 区域（例如新加坡是 ap-southeast-1）
-          deployment_package: Dockerrun.aws.json
-
-      # =================【加分项 5: 成功发布后自动删除功能分支】=================
-      - name: delete branch
-        if: success()                                      # 只有当前面的步骤全部成功时才执行
-        run: |
-          git push origin :githubcicd
-        env:
-          GITHUB_TOKEN: ${{ secrets.WORKSHOP6_GITHUB_TOKEN }}
