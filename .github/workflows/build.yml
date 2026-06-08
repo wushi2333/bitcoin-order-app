@@ -2,7 +2,7 @@ name: Bitcoin order App
 on:
   push:
     branches:
-      - githubcicd
+      - feature/mlops-demo
 jobs:
   ci:
     runs-on: ubuntu-latest
